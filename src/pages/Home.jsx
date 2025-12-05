@@ -4,6 +4,7 @@ import { FiLogOut } from "react-icons/fi";
 import Card from "../components/Card.jsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 // Global axios config
 axios.defaults.withCredentials = true;
@@ -122,8 +123,15 @@ export default function Home() {
     try {
       const params = {};
 
-      if (cat && cat !== "All") params.category = cat.toLowerCase();
-      if (query) params.q = query;
+      // Only send category if it's a REAL NewsAPI category
+      if (MAIN_CATEGORIES.includes(cat)) {
+        params.category = cat.toLowerCase();
+      }
+
+      // Use search when user types OR for categories like All, Timeline, Markets, Startups
+      if (query.trim()) {
+        params.q = query.trim();
+      }
 
       const response = await axios.get("/news", { params });
 
@@ -144,6 +152,13 @@ export default function Home() {
   const handleCategoryClick = (cat) => {
     setCategory(cat);
     setVisibleCount(4);
+
+    // For Timeline, Startups, Markets → use keyword search
+    if (cat === "Timeline") return getData("breaking OR latest OR update", cat);
+    if (cat === "Startups") return getData("startup OR funding OR venture", cat);
+    if (cat === "Markets") return getData("market OR stock OR nifty OR sensex", cat);
+
+    // Normal categories
     getData(search, cat);
   };
 
@@ -151,7 +166,7 @@ export default function Home() {
     <>
       <header className="navbar">
         <div className="left-section">
-          <img src="src/assets/logo.png" alt="Logo" className="logo-img" />
+          <img src={logo} alt="Logo" className="logo-img" />
           <h1 className="logo-heading">NextRead</h1>
         </div>
 
