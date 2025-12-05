@@ -3,14 +3,19 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+// Configure axios for production
+axios.defaults.withCredentials = true;
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get("http://localhost:3001/me")
-      .then(res => {
+    axios
+      .get("/me")
+      .then((res) => {
         if (res.data?.email) {
           navigate("/home");
         }
@@ -20,17 +25,18 @@ export default function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    axios.post("http://localhost:3001/login", { email, password })
-      .then(res => {
+
+    axios
+      .post("/login", { email, password })
+      .then((res) => {
         if (res.data === "Successfully Logged in") {
           navigate("/home");
         } else {
           alert(res.data);
         }
       })
-      .catch(err => console.log(err));
-  }
+      .catch((err) => console.log(err));
+  };
 
   return (
     <>

@@ -5,7 +5,9 @@ import Card from "../components/Card.jsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+// Global axios config
 axios.defaults.withCredentials = true;
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
 
 const timeAgo = (timeString) => {
   const now = new Date();
@@ -44,15 +46,7 @@ const Timeline = ({ data }) => {
     else groups["Last 72 hours"].push(item);
   });
 
-  const sections = [
-    "Last 1 hour",
-    "Last 3 hours",
-    "Last 6 hours",
-    "Last 12 hours",
-    "Last 24 hours",
-    "Last 48 hours",
-    "Last 72 hours",
-  ];
+  const sections = Object.keys(groups);
 
   return (
     <div className="timeline-container">
@@ -98,7 +92,6 @@ export default function Home() {
   const [open, setOpen] = useState(false);
 
   const navigate = useNavigate();
-  const API_KEY = "8d107bf33a3144cf8e89f70c2b38f6c2";
 
   const MAIN_CATEGORIES = [
     "Technology",
@@ -109,9 +102,10 @@ export default function Home() {
     "Science",
   ];
 
+  // -------- AUTH CHECK ----------
   useEffect(() => {
     axios
-      .get("http://localhost:3001/me")
+      .get("/me")
       .then((res) => {
         if (!res.data?.email) navigate("/");
       })
@@ -119,74 +113,22 @@ export default function Home() {
   }, []);
 
   const handleLogout = () => {
-    axios.post("http://localhost:3001/logout").then(() => navigate("/"));
+    axios.post("/logout").then(() => navigate("/"));
   };
 
+  // ---------- FETCH NEWS FROM BACKEND ----------
   const getData = async (query = search, cat = category) => {
     setLoading(true);
     try {
-      let url = "";
-      let json = {};
+      const params = {};
 
-      if (MAIN_CATEGORIES.includes(cat)) {
-        url = `https://newsapi.org/v2/top-headlines?category=${cat.toLowerCase()}&language=en&apiKey=${API_KEY}`;
-        let res = await fetch(url);
-        json = await res.json();
+      if (cat && cat !== "All") params.category = cat.toLowerCase();
+      if (query) params.q = query;
 
-        if (!json.articles?.length) {
-          url = `https://newsapi.org/v2/everything?q=${cat}&language=en&sortBy=publishedAt&apiKey=${API_KEY}`;
-          res = await fetch(url);
-          json = await res.json();
-        }
+      const response = await axios.get("/news", { params });
 
-        setNewsData(json.articles || []);
-        return;
-      }
-
-      if (cat === "Startups") {
-        const q =
-          "startup OR funding OR venture OR raised OR investor OR incubator OR founders OR unicorn";
-        url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-          q
-        )}&language=en&sortBy=publishedAt&apiKey=${API_KEY}`;
-        const res = await fetch(url);
-        json = await res.json();
-        setNewsData(json.articles || []);
-        return;
-      }
-
-      if (cat === "Markets") {
-        const q =
-          "market OR stock OR index OR nifty OR sensex OR NSE OR BSE OR inflation OR finance OR rupee OR economy";
-        url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-          q
-        )}&language=en&sortBy=publishedAt&apiKey=${API_KEY}`;
-        const res = await fetch(url);
-        json = await res.json();
-        setNewsData(json.articles || []);
-        return;
-      }
-
-      if (cat === "Timeline") {
-        const q = "breaking OR latest OR update OR news";
-        url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-          q
-        )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${API_KEY}`;
-        const res = await fetch(url);
-        json = await res.json();
-        setNewsData(json.articles || []);
-        return;
-      }
-
-      const q = query.trim() ? query : "latest";
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-        q
-      )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${API_KEY}`;
-      const res = await fetch(url);
-      json = await res.json();
-
-      const sorted = sortTrending(json.articles || []);
-      setNewsData(sorted);
+      const articles = response.data.articles || [];
+      setNewsData(sortTrending(articles));
     } catch (e) {
       console.log(e);
       setNewsData([]);
