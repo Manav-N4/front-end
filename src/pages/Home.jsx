@@ -90,7 +90,7 @@ export default function Home() {
   const [category, setCategory] = useState("All");
   const [newsData, setNewsData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(8);
+  const [visibleCount, setVisibleCount] = useState(12);
   const [open, setOpen] = useState(false);
 
   const navigate = useNavigate();
