@@ -6,10 +6,11 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 
-// Global axios config
+// Axios global config
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
 
+// Time ago helper
 const timeAgo = (timeString) => {
   const now = new Date();
   const past = new Date(timeString);
@@ -19,6 +20,7 @@ const timeAgo = (timeString) => {
   return Math.floor(diff / 3600) + " hours ago";
 };
 
+// Timeline Component
 const Timeline = ({ data }) => {
   const now = new Date();
   const recent = data.filter((item) => {
@@ -47,11 +49,9 @@ const Timeline = ({ data }) => {
     else groups["Last 72 hours"].push(item);
   });
 
-  const sections = Object.keys(groups);
-
   return (
     <div className="timeline-container">
-      {sections.map((sec) =>
+      {Object.keys(groups).map((sec) =>
         groups[sec].length > 0 ? (
           <div key={sec} className="timeline-section">
             <h2 className="timeline-section-title">{sec}</h2>
@@ -79,6 +79,7 @@ const Timeline = ({ data }) => {
   );
 };
 
+// Sort by latest
 const sortTrending = (articles) =>
   articles
     .filter((a) => a.urlToImage)
@@ -103,7 +104,7 @@ export default function Home() {
     "Science",
   ];
 
-  // -------- AUTH CHECK ----------
+  // Auth check
   useEffect(() => {
     axios
       .get("/me")
@@ -117,28 +118,30 @@ export default function Home() {
     axios.post("/logout").then(() => navigate("/"));
   };
 
-  // ---------- FETCH NEWS FROM BACKEND ----------
+  // Fetch from backend
+  const fetchNews = async (query) => {
+    const res = await axios.get("/news", { params: { q: query } });
+    return res.data.articles || [];
+  };
+
   const getData = async (query = search, cat = category) => {
     setLoading(true);
     try {
-      const params = {};
+      let q = "";
 
-      // Only send category if it's a REAL NewsAPI category
-      if (MAIN_CATEGORIES.includes(cat)) {
-        params.category = cat.toLowerCase();
-      }
+      if (MAIN_CATEGORIES.includes(cat)) q = cat;
+      else if (cat === "Startups")
+        q = "startup OR funding OR venture OR investor OR unicorn";
+      else if (cat === "Markets")
+        q = "market OR stock OR nifty OR sensex OR economy OR finance";
+      else if (cat === "Timeline")
+        q = "breaking OR latest OR update OR news";
+      else q = query.trim() ? query : "latest";
 
-      // Use search when user types OR for categories like All, Timeline, Markets, Startups
-      if (query.trim()) {
-        params.q = query.trim();
-      }
-
-      const response = await axios.get("/news", { params });
-
-      const articles = response.data.articles || [];
+      const articles = await fetchNews(q);
       setNewsData(sortTrending(articles));
-    } catch (e) {
-      console.log(e);
+    } catch (err) {
+      console.log(err);
       setNewsData([]);
     } finally {
       setLoading(false);
@@ -152,13 +155,6 @@ export default function Home() {
   const handleCategoryClick = (cat) => {
     setCategory(cat);
     setVisibleCount(4);
-
-    // For Timeline, Startups, Markets → use keyword search
-    if (cat === "Timeline") return getData("breaking OR latest OR update", cat);
-    if (cat === "Startups") return getData("startup OR funding OR venture", cat);
-    if (cat === "Markets") return getData("market OR stock OR nifty OR sensex", cat);
-
-    // Normal categories
     getData(search, cat);
   };
 
